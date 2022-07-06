@@ -1,0 +1,29 @@
+main: fr.celestgames.fts.FTSMain
+name: FTS_Plugin
+version: '0.1'
+description: A test plugin
+author: Celest_Guy
+website: http://celestgames.fr
+load: POSTWORLD
+commands:
+  infos:
+    description: Obtenir les infos du plugin du serveur
+    aliases: i
+    usage: /<command>
+
+  lobby:
+    description: Commande pour se téléporter dans le lobby
+    aliases: l
+    usage: /<command>
+
+  party:
+    description: Créer, joindre ou quitter une party
+    aliases: p
+    permission-message: §cVous n'avez pas la permission d'exécuter cette commande !
+    usage: /<command> <join | create | leave | list>
+
+  game:
+    description: Commande pour rejoindre, démarrer, stopper ou configurer un mini-jeu
+    aliases: g
+    permission-message: §cVous ne pouvez pas exécuter cette commande, car vous n'êtes pas l'hôte de la partie !
+    usage: /<command> <join | start | stop | config>

@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="fts:jar">
+    <output-path>$PROJECT_DIR$/debugServer/plugins</output-path>
+    <root id="archive" name="fts.jar">
+      <element id="module-output" name="fts" />
+    </root>
+  </artifact>
+</component>
