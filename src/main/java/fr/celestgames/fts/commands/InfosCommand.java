@@ -12,13 +12,10 @@ import java.util.Objects;
 import static org.bukkit.Bukkit.getServer;
 
 public class InfosCommand extends PluginCommand {
-    public InfosCommand(FTSMain plugin) {
-        super(plugin);
-    }
-
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (command != null) {
+            FTSMain plugin = FTSMain.getInstance();
             // FTS = From the sky
             sender.sendMessage("§6§lFTS Plugin §8» §7Version: 0.0.1");
             sender.sendMessage("§6§lFTS Plugin §8» §7Author: Celest_Guy (Théo DUVAL)");

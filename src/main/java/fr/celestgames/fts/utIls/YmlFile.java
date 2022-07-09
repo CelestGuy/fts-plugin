@@ -1,5 +1,7 @@
 package fr.celestgames.fts.utIls;
 
+import org.bukkit.Bukkit;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
@@ -9,9 +11,6 @@ import java.util.Scanner;
 
 public class YmlFile {
     private final HashMap<String, ArrayList<String>> options = new HashMap<>();
-
-    public YmlFile() {
-    }
 
     public YmlFile(String path) {
         File file = new File(path);
@@ -25,9 +24,8 @@ public class YmlFile {
                 }
                 String[] split = line.split(":");
                 if (split.length == 2) {
-                    String value = split[1];
+                    String value = split[1].trim();
                     ArrayList<String> values = new ArrayList<>();
-
 
                     if (value.startsWith("[")) {
                         value = value.substring(1, value.length() - 1);
@@ -59,9 +57,8 @@ public class YmlFile {
                 }
                 String[] split = line.split(":");
                 if (split.length == 2) {
-                    String value = split[1];
+                    String value = split[1].trim();
                     ArrayList<String> values = new ArrayList<>();
-
 
                     if (value.startsWith("[")) {
                         value = value.substring(1, value.length() - 1);
@@ -80,6 +77,10 @@ public class YmlFile {
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
+    }
+
+    public YmlFile() {
+
     }
 
     public ArrayList<String> getValues(String key) {
@@ -122,5 +123,9 @@ public class YmlFile {
             s.append(key).append(": ").append(getStringValue(key)).append("\n");
         }
         return s.toString();
+    }
+
+    public HashMap<String, ArrayList<String>> getOptions() {
+        return options;
     }
 }

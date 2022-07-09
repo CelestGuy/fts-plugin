@@ -1,8 +1,13 @@
 package fr.celestgames.fts.commands;
 
 import fr.celestgames.fts.FTSMain;
-import fr.celestgames.fts.server.Party;
+import fr.celestgames.fts.exceptions.PartyException;
+import fr.celestgames.fts.server.PartyManager;
+import fr.celestgames.fts.server.party.Party;
 import fr.celestgames.fts.enumerations.PartyType;
+import net.md_5.bungee.api.ChatColor;
+import net.md_5.bungee.api.chat.ClickEvent;
+import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.command.*;
 import org.bukkit.entity.Player;
 
@@ -10,8 +15,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class PartyCommand extends PluginCommand {
-    public PartyCommand(FTSMain plugin) {
-        super(plugin);
+    private final FTSMain plugin;
+
+    public PartyCommand() {
+        this.plugin = FTSMain.getInstance();
     }
 
     @Override
@@ -39,7 +46,7 @@ public class PartyCommand extends PluginCommand {
     @Override
     public List<String> onTabComplete(CommandSender commandSender, Command command, String label, String[] args) {
         if (commandSender instanceof Player player) {
-            Party party = plugin.getPartyManager().getPlayerParty(player.getName());
+            Party party = PartyManager.getInstance().getPlayerParty(player.getName());
 
             if (party == null) {
                 if (args.length == 1) {
@@ -51,10 +58,10 @@ public class PartyCommand extends PluginCommand {
                         }
                         case "join" -> {
                             ArrayList<String> parties = new ArrayList<>();
-                            parties.addAll(plugin.getPartyManager().getPublicParties());
-                            parties.addAll(plugin.getPartyManager().getPartyRequests(player));
+                            parties.addAll(PartyManager.getInstance().getPublicParties());
+                            parties.addAll(PartyManager.getInstance().getPartyRequests(player));
                             if (player.isOp()) {
-                                parties.addAll(plugin.getPartyManager().getPrivateParties());
+                                parties.addAll(PartyManager.getInstance().getPrivateParties());
                             }
                             return parties;
                         }
@@ -62,8 +69,8 @@ public class PartyCommand extends PluginCommand {
                             return null;
                         }
                         case "accept", "deny" -> {
-                            if (plugin.getPartyManager().getPartyRequests(player) != null) {
-                                return plugin.getPartyManager().getPartyRequests(player);
+                            if (PartyManager.getInstance().getPartyRequests(player) != null) {
+                                return PartyManager.getInstance().getPartyRequests(player);
                             } else {
                                 return List.of();
                             }
@@ -81,11 +88,11 @@ public class PartyCommand extends PluginCommand {
                     if (party.getLeader().equals(player)) {
                         switch (args[0]) {
                             case "visibility" -> {
-                                return List.of("public", "private", "friends");
+                                return List.of("public", "private");
                             }
                             case "kick" -> {
                                 List<String> players = new ArrayList<>();
-                                for (Player p : plugin.getPartyManager().getPlayerParty(player.getName()).getMembers()) {
+                                for (Player p : PartyManager.getInstance().getPlayerParty(player.getName()).getMembers()) {
                                     if (!p.equals(player)) {
                                         players.add(p.getName());
                                     }
@@ -105,17 +112,17 @@ public class PartyCommand extends PluginCommand {
 
     private void listParties(Player player) {
         StringBuilder sb = new StringBuilder();
-        Party party = plugin.getPartyManager().getPlayerParty(player.getName());
+        Party party = PartyManager.getInstance().getPlayerParty(player.getName());
 
         if (party == null) {
             sb.append("§6Parties publiques:§r\n");
-            for (String p : plugin.getPartyManager().getPublicParties()) {
+            for (String p : PartyManager.getInstance().getPublicParties()) {
                 sb.append("   - §a").append(p).append("§r\n");
             }
 
             if (player.isOp()) {
                 sb.append("\n").append("§6Parties privées:§r\n");
-                for (String p : plugin.getPartyManager().getPrivateParties()) {
+                for (String p : PartyManager.getInstance().getPrivateParties()) {
                     sb.append("   - §7").append(p).append("§r\n");
                 }
             }
@@ -133,19 +140,17 @@ public class PartyCommand extends PluginCommand {
     }
 
     private void joinParty(Player player, String[] args) {
-        Party playerParty = plugin.getPartyManager().getPlayerParty(player.getName());
+        Party playerParty = PartyManager.getInstance().getPlayerParty(player.getName());
         if (playerParty != null) {
             player.sendMessage("§cVous êtes déjà dans une party.");
         } else if (args.length >= 2) {
-            Party party = plugin.getPartyManager().getParty(args[1]);
+            Party party = PartyManager.getInstance().getParty(args[1]);
 
             if (party != null) {
-                if (party.getType() == PartyType.PUBLIC || player.isOp() || plugin.getPartyManager().getPartyRequests(player).contains(args[1])) {
+                if (party.getType() == PartyType.PUBLIC || player.isOp() || PartyManager.getInstance().getPartyRequests(player).contains(args[1])) {
                     party.addMember(player);
                 } else if (party.getType() == PartyType.PRIVATE) {
                     player.sendMessage("§cCette party est privée.");
-                } else if (party.getType() == PartyType.FRIENDS) {
-                    player.sendMessage("§cCette party n'est qu'avec des amis ou sur invitation.");
                 }
             } else {
                 player.sendMessage("§cCette party n'existe pas.");
@@ -156,15 +161,19 @@ public class PartyCommand extends PluginCommand {
     }
 
     private void leaveParty(Player player) {
-        plugin.getPartyManager().getPlayerParty(player.getName()).removeMember(player);
+        PartyManager.getInstance().getPlayerParty(player.getName()).removeMember(player);
     }
 
     private void createParty(Player player, String[] args) {
-        Party playerParty = plugin.getPartyManager().getPlayerParty(player.getName());
+        Party playerParty = PartyManager.getInstance().getPlayerParty(player.getName());
         if (playerParty != null) {
             player.sendMessage("§cVous êtes déjà dans une party.");
         } else if (args.length >= 2) {
-            plugin.getPartyManager().createParty(args[1], player);
+            try {
+                PartyManager.getInstance().createParty(args[1], player);
+            } catch (PartyException e) {
+                player.sendMessage("§c" + e.getMessage());
+            }
         } else {
             player.sendMessage("§c/party create <name>");
         }
@@ -172,15 +181,27 @@ public class PartyCommand extends PluginCommand {
 
     private void invitePlayer(Player sender, String[] args) {
         if (args.length >= 2) {
-            Party party = plugin.getPartyManager().getPlayerParty(sender.getName());
+            Party party = PartyManager.getInstance().getPlayerParty(sender.getName());
             Player invited = plugin.getServer().getPlayer(args[1]);
 
             if (party != null) {
                 if (party.getLeader().equals(sender)) {
                     if (invited != null) {
                         try {
-                            plugin.getPartyManager().addInvitation(invited, party);
+                            PartyManager.getInstance().addInvitation(sender, invited, party);
                             invited.sendMessage("§b§l" + sender.getName() + "§r vous a invité à rejoindre la party §a§l" + party.getName() + "§r. Vous avez 60 secondes pour accepter.");
+                            TextComponent text = new TextComponent("   Accepter ");
+                            text.setColor(ChatColor.DARK_GREEN);
+                            text.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/party accept " + party.getName()));
+                            TextComponent text2 = new TextComponent(" Refuser");
+                            text2.setColor(ChatColor.DARK_RED);
+                            text2.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/party deny " + party.getName()));
+
+                            text.addExtra("§6§l/§r");
+                            text.addExtra(text2);
+
+                            invited.spigot().sendMessage(text);
+
                             sender.sendMessage("§b§l" + invited.getName() + "§r a été invité à rejoindre la party §a§l" + party.getName() + "§r.");
                         } catch (Exception e) {
                             sender.sendMessage("§c" + e.getMessage());
@@ -200,11 +221,11 @@ public class PartyCommand extends PluginCommand {
     }
 
     private void denyInvitation(Player player, String[] args) {
-        Party playerParty = plugin.getPartyManager().getPlayerParty(player.getName());
+        Party playerParty = PartyManager.getInstance().getPlayerParty(player.getName());
         if (playerParty != null) {
             player.sendMessage("§cVous êtes déjà dans une party.");
         } else {
-            List<String> partyRequests = plugin.getPartyManager().getPartyRequests(player);
+            List<String> partyRequests = PartyManager.getInstance().getPartyRequests(player);
 
             if (partyRequests == null || partyRequests.size() == 0) {
                 player.sendMessage("§cVous n'avez aucune invitation en attente.");
@@ -212,14 +233,14 @@ public class PartyCommand extends PluginCommand {
                 if (args.length >= 2) {
                     String partyName = args[1];
                     if (partyRequests.contains(partyName)) {
-                        plugin.getPartyManager().removeInvitation(player, partyName);
+                        PartyManager.getInstance().removeInvitation(player, partyName);
                         player.sendMessage("§cVous avez refusé l'invitation pour rejoindre la party §a§l" + partyName + "§r.");
                     } else {
                         player.sendMessage("§cVous n'avez pas d'invitation pour rejoindre la party §a§l" + partyName + "§r.");
                     }
                 } else {
                     String partyName = partyRequests.get(0);
-                    plugin.getPartyManager().removeInvitation(player, partyName);
+                    PartyManager.getInstance().removeInvitation(player, partyName);
                     player.sendMessage("§cVous avez refusé l'invitation pour rejoindre la party §a§l" + partyName + "§r.");
                 }
             }
@@ -227,11 +248,11 @@ public class PartyCommand extends PluginCommand {
     }
 
     private void acceptInvitation(Player player, String[] args) {
-        Party playerParty = plugin.getPartyManager().getPlayerParty(player.getName());
+        Party playerParty = PartyManager.getInstance().getPlayerParty(player.getName());
         if (playerParty != null) {
             player.sendMessage("§cVous êtes déjà dans une party.");
         } else {
-            List<String> partyRequests = plugin.getPartyManager().getPartyRequests(player);
+            List<String> partyRequests = PartyManager.getInstance().getPartyRequests(player);
 
             if (partyRequests == null || partyRequests.size() == 0) {
                 player.sendMessage("§cVous n'avez aucune invitation en attente.");
@@ -239,15 +260,15 @@ public class PartyCommand extends PluginCommand {
                 if (args.length >= 2) {
                     String partyName = args[1];
                     if (partyRequests.contains(partyName)) {
-                        plugin.getPartyManager().removeInvitation(player, partyName);
-                        plugin.getPartyManager().getParty(partyName).addMember(player);
+                        PartyManager.getInstance().removeInvitation(player, partyName);
+                        PartyManager.getInstance().getParty(partyName).addMember(player);
                     } else {
                         player.sendMessage("§cVous n'avez pas d'invitation pour rejoindre la party §a§l" + partyName + "§r.");
                     }
                 } else {
                     String partyName = partyRequests.get(0);
-                    plugin.getPartyManager().getParty(partyName).addMember(player);
-                    plugin.getPartyManager().removeInvitation(player, partyName);
+                    PartyManager.getInstance().getParty(partyName).addMember(player);
+                    PartyManager.getInstance().removeInvitation(player, partyName);
                 }
             }
         }
@@ -255,7 +276,7 @@ public class PartyCommand extends PluginCommand {
 
     private void setPartyVisibility(Player player, String[] args) {
         if (args.length >= 2) {
-            Party party = plugin.getPartyManager().getPlayerParty(player.getName());
+            Party party = PartyManager.getInstance().getPlayerParty(player.getName());
 
             if (party != null) {
                 PartyType type = party.getType();
@@ -271,10 +292,6 @@ public class PartyCommand extends PluginCommand {
                             case "private" -> {
                                 party.setType(PartyType.PRIVATE);
                                 player.sendMessage("Votre party est maintenant §cprivée§r.");
-                            }
-                            case "friends" -> {
-                                party.setType(PartyType.FRIENDS);
-                                player.sendMessage("Votre party n'est maintenant §avisible§r que par invitation ou pour vos amis.");
                             }
                             default -> player.sendMessage("§c/party visibility <public|private|friends>");
                         }
@@ -292,7 +309,7 @@ public class PartyCommand extends PluginCommand {
 
     private void kickPlayer(Player player, String[] args) {
         if (args.length >= 2) {
-            Party party = plugin.getPartyManager().getPlayerParty(player.getName());
+            Party party = PartyManager.getInstance().getPlayerParty(player.getName());
 
             if (party != null) {
                 if (party.getLeader().equals(player)) {

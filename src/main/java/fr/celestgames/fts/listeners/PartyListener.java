@@ -1,26 +1,21 @@
 package fr.celestgames.fts.listeners;
 
 import fr.celestgames.fts.events.party.*;
-import fr.celestgames.fts.server.Party;
+import fr.celestgames.fts.server.party.Party;
 import fr.celestgames.fts.server.PartyManager;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 
 public class PartyListener implements Listener {
-    private final PartyManager partyManager;
-    public PartyListener(PartyManager partyManager) {
-        this.partyManager = partyManager;
-    }
-
     @EventHandler
     public void onPlayerJoinParty(PlayerJoinPartyEvent event) {
         Party party = event.getParty();
         Player player = event.getPlayer();
         player.sendMessage("Vous avez rejoint la party §a§l" + party.getName() + "§r.");
 
-        if (partyManager.getPartyRequests(player) != null) {
-            partyManager.getPartyRequests(player).remove(party.getName());
+        if (PartyManager.getInstance().getPartyRequests(player) != null) {
+            PartyManager.getInstance().getPartyRequests(player).remove(party.getName());
         }
 
         for (Player member : party.getMembers()) {
@@ -41,12 +36,12 @@ public class PartyListener implements Listener {
                 member.sendMessage("§b§l" + player.getName() + "§r a §cquitté§r la party.");
             }
         } else {
-            partyManager.removeParty(party.getName());
+            PartyManager.getInstance().removeParty(party.getName());
         }
     }
 
     @EventHandler
-    public void onLeaderChange(LeaderChange event) {
+    public void onLeaderChange(LeaderChangeEvent event) {
         Player newLeader = event.getNewLeader();
         Party party = event.getParty();
 

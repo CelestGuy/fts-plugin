@@ -1,6 +1,6 @@
 package fr.celestgames.fts.events.party;
 
-import fr.celestgames.fts.server.Party;
+import fr.celestgames.fts.server.party.Party;
 import org.bukkit.entity.Player;
 
 public class PlayerJoinPartyEvent extends PartyEvent {

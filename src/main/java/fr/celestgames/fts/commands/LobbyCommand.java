@@ -9,10 +9,6 @@ import org.bukkit.entity.Player;
 import java.util.List;
 
 public class LobbyCommand extends PluginCommand {
-    public LobbyCommand(FTSMain plugin) {
-        super(plugin);
-    }
-
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (command != null && sender instanceof Player p) {

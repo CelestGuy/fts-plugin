@@ -1,5 +1,10 @@
 package fr.celestgames.fts.listeners;
 
+import fr.celestgames.fts.FTSMain;
+import fr.celestgames.fts.minigames.Minigame;
+import fr.celestgames.fts.server.GameManager;
+import fr.celestgames.fts.server.PartyManager;
+import fr.celestgames.fts.server.party.Party;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -16,16 +21,24 @@ public class PlayerListener implements Listener {
 
     @EventHandler
     public void onPlayerLeave(PlayerQuitEvent event) {
-        Player player = event.getPlayer();
-        teleportPlayerToLobby(player);
-        removePlayerFromTeam(player);
+        clearPlayer(event.getPlayer());
     }
 
     @EventHandler
     public void onPlayerLeave(PlayerKickEvent event) {
-        Player player = event.getPlayer();
+        clearPlayer(event.getPlayer());
+    }
+
+    private void clearPlayer(Player player) {
+        //player.getInventory().clear();
         teleportPlayerToLobby(player);
         removePlayerFromTeam(player);
+        removePlayerFromParty(player);
+        removePlayerFromMinigame(player);
+        PartyManager.getInstance().removeInvitations(player);
+        for (Party p : PartyManager.getInstance().getParties()) {
+            p.removeMember(player);
+        }
     }
 
     private void teleportPlayerToLobby(Player player) {
@@ -39,5 +52,19 @@ public class PlayerListener implements Listener {
         p.getScoreboard().getTeams().forEach(team -> {
             team.removeEntry(p.getName());
         });
+    }
+
+    private void removePlayerFromParty(Player p) {
+        Party pa = PartyManager.getInstance().getParty(p.getName());
+        if (pa != null) {
+            pa.removeMember(p);
+        }
+    }
+
+    private void removePlayerFromMinigame(Player p) {
+        Minigame g = GameManager.getInstance().getPlayerMinigame(p);
+        if (g != null) {
+            g.removePlayer(p);
+        }
     }
 }
