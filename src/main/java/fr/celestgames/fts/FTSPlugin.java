@@ -1,30 +1,23 @@
 package fr.celestgames.fts;
 
-import fr.celestgames.fts.enumerations.GameType;
 import fr.celestgames.fts.listeners.MinigameListener;
-import fr.celestgames.fts.minigames.HideNSeek;
-import fr.celestgames.fts.minigames.Minigame;
 import fr.celestgames.fts.server.CommandManager;
 import fr.celestgames.fts.listeners.PartyListener;
 import fr.celestgames.fts.listeners.PlayerListener;
-import fr.celestgames.fts.server.GameManager;
-import fr.celestgames.fts.server.PartyManager;
 import fr.celestgames.fts.utIls.YmlFile;
 import org.bukkit.Bukkit;
 import org.bukkit.WorldCreator;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.util.HashMap;
-
 import static fr.celestgames.fts.utIls.FileUtil.*;
 
-public class FTSMain extends JavaPlugin {
+public class FTSPlugin extends JavaPlugin {
     private YmlFile config;
     private YmlFile maps;
 
-    private static FTSMain instance;
+    private static FTSPlugin instance;
 
-    public FTSMain() {
+    public FTSPlugin() {
         instance = this;
     }
 
@@ -34,10 +27,6 @@ public class FTSMain extends JavaPlugin {
         if (!fileExists("plugins/FTS/maps.yml")) {
             YmlFile ymlFile = new YmlFile();
             ymlFile.addValue("lobby", "lobby");
-
-            for (GameType gameType : GameType.values()) {
-                ymlFile.addValue(gameType.getName(), "");
-            }
 
             writeFile("plugins/FTS/maps.yml", ymlFile.toString());
             maps = ymlFile;
@@ -82,7 +71,7 @@ public class FTSMain extends JavaPlugin {
         return maps;
     }
 
-    public static FTSMain getInstance() {
+    public static FTSPlugin getInstance() {
         return instance;
     }
 }

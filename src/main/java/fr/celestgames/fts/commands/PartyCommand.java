@@ -1,6 +1,6 @@
 package fr.celestgames.fts.commands;
 
-import fr.celestgames.fts.FTSMain;
+import fr.celestgames.fts.FTSPlugin;
 import fr.celestgames.fts.exceptions.PartyException;
 import fr.celestgames.fts.server.PartyManager;
 import fr.celestgames.fts.server.party.Party;
@@ -15,10 +15,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class PartyCommand extends PluginCommand {
-    private final FTSMain plugin;
+    private final FTSPlugin plugin;
 
     public PartyCommand() {
-        this.plugin = FTSMain.getInstance();
+        this.plugin = FTSPlugin.getInstance();
     }
 
     @Override

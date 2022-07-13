@@ -4,13 +4,13 @@ import org.bukkit.Bukkit;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Scanner;
 
 public class YmlFile {
-    private final HashMap<String, ArrayList<String>> options = new HashMap<>();
+    private final HashMap<String, HashSet<String>> options = new HashMap<>();
 
     public YmlFile(String path) {
         File file = new File(path);
@@ -25,7 +25,7 @@ public class YmlFile {
                 String[] split = line.split(":");
                 if (split.length == 2) {
                     String value = split[1].trim();
-                    ArrayList<String> values = new ArrayList<>();
+                    HashSet<String> values = new HashSet<>();
 
                     if (value.startsWith("[")) {
                         value = value.substring(1, value.length() - 1);
@@ -58,13 +58,18 @@ public class YmlFile {
                 String[] split = line.split(":");
                 if (split.length == 2) {
                     String value = split[1].trim();
-                    ArrayList<String> values = new ArrayList<>();
+                    HashSet<String> values = new HashSet<>();
 
                     if (value.startsWith("[")) {
                         value = value.substring(1, value.length() - 1);
                         values.addAll(Arrays.asList(value.split(",")));
                     } else {
                         values.add(value);
+                    }
+
+                    System.out.println(split[0] + ": ");
+                    for (String s : values) {
+                        System.out.println(s);
                     }
 
                     options.put(split[0], values);
@@ -83,25 +88,23 @@ public class YmlFile {
 
     }
 
-    public ArrayList<String> getValues(String key) {
+    public HashSet<String> getValues(String key) {
         return options.get(key);
     }
 
     public String getStringValue(String key) {
-        ArrayList<String> values = options.get(key);
+        HashSet<String> values = options.get(key);
         StringBuilder s = new StringBuilder();
         if (values != null) {
             if (values.size() > 1) {
                 s.append("[");
-                for (int i = 0; i < values.size(); i++) {
-                    s.append(values.get(i));
-                    if (i < values.size() - 1) {
-                        s.append(",");
-                    }
+                for (String value : values) {
+                    s.append(value).append(", ");
                 }
                 s.append("]");
             } else {
-                s = new StringBuilder(values.get(0));
+                s = new StringBuilder();
+                s.append(values.toArray()[0]);
             }
         }
         return s.toString();
@@ -111,7 +114,7 @@ public class YmlFile {
         if (options.containsKey(key)) {
             options.get(key).add(value);
         } else {
-            ArrayList<String> values = new ArrayList<>();
+            HashSet<String> values = new HashSet<>();
             values.add(value);
             options.put(key, values);
         }
@@ -125,7 +128,7 @@ public class YmlFile {
         return s.toString();
     }
 
-    public HashMap<String, ArrayList<String>> getOptions() {
+    public HashMap<String, HashSet<String>> getOptions() {
         return options;
     }
 }

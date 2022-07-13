@@ -1,6 +1,5 @@
 package fr.celestgames.fts.server;
 
-import fr.celestgames.fts.FTSMain;
 import fr.celestgames.fts.enumerations.PartyType;
 import fr.celestgames.fts.exceptions.PartyException;
 import fr.celestgames.fts.server.party.Party;

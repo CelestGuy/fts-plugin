@@ -1,233 +1,276 @@
 package fr.celestgames.fts.minigames;
 
-import fr.celestgames.fts.FTSMain;
-import fr.celestgames.fts.enumerations.GameType;
+import fr.celestgames.fts.FTSPlugin;
 import fr.celestgames.fts.exceptions.MinigameException;
 import fr.celestgames.fts.listeners.HnSListener;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
-import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.ArmorStand;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
-import org.bukkit.event.HandlerList;
-import org.bukkit.scoreboard.Team;
 
+import java.util.HashSet;
+import java.util.List;
 import java.util.Random;
 
-import static fr.celestgames.fts.utIls.FileUtil.writeFile;
 import static fr.celestgames.fts.utIls.TimerFormater.formatTime;
 import static org.bukkit.Bukkit.*;
 
 public class HideNSeek extends Minigame {
+    private final int DEFAULT_HIDE_TIME = 60;
+    private final int DEFAULT_SEEK_TIME = 600;
+
+    private Location seekerSpawn;
     private HnSListener listener;
-    private final int defaultHideTime;
-    private final int defaultSeekTime;
 
     private int hideTime;
     private int seekTime;
 
-    private int task;
-    private Player seeker;
+    private HashSet<String> hiders;
+    private HashSet<String> seekers;
+    private String firstSeeker;
 
     public HideNSeek() throws MinigameException {
-        super(GameType.HIDE_N_SEEK, 4, 16);
-        this.defaultHideTime = 60;
-        this.defaultSeekTime = 600;
-        this.hideTime = defaultHideTime;
-        this.seekTime = defaultSeekTime;
+        super("Hide & Seek", "hns", 4, 16);
+        hideTime = DEFAULT_HIDE_TIME;
+        seekTime = DEFAULT_SEEK_TIME;
+        seekers = new HashSet<>();
+        hiders = new HashSet<>();
     }
 
-    @Override
-    public void start() throws MinigameException {
-        ArmorStand seekerSpawn = null;
-
-        if (world == null) {
-            throw new MinigameException("La map n'a pas été trouvée");
+    public void setCurrentMap(String map) throws MinigameException {
+        if (!mapIDs.contains(map)) {
+            throw new MinigameException(MinigameException.MAP_NOT_FOUND);
         } else {
-            for (Entity entity : world.getEntities()) {
-                if (entity instanceof ArmorStand) {
-                    if (entity.getName().equals("seeker_spawn")) {
-                        seekerSpawn = (ArmorStand) entity;
+            World world = getWorld(map);
+            if (world == null) {
+                throw new MinigameException(MinigameException.MAP_NOT_FOUND);
+            } else {
+                ArmorStand ass = world.getEntitiesByClass(ArmorStand.class).stream().filter(armorStand -> armorStand.getName().equals("seeker_spawn")).findFirst().orElse(null);
+
+                if (ass == null) {
+                    throw new MinigameException(MinigameException.NO_SPAWN_FOUND);
+                } else {
+                    seekerSpawn = ass.getLocation();
+                }
+
+                currentMapID = map;
+                currentWorld = getWorld(map);
+                randomMap = false;
+            }
+        }
+    }
+
+    public void addSeeker(String seeker) {
+        seekers.add(seeker);
+    }
+
+    public void removeHider(String hider) {
+        hiders.remove(hider);
+    }
+
+    public boolean isSeeker(String player) {
+        return seekers.contains(player);
+    }
+
+    public boolean isHider(String player) {
+        return hiders.contains(player);
+    }
+
+    @Override
+    protected void init() throws MinigameException {
+        if (seekerSpawn == null) {
+            throw new MinigameException(MinigameException.NO_SPAWN_FOUND);
+        } else {
+            if (super.randomMap) {
+                String tempMap = mapIDs.toArray()[new Random().nextInt(mapIDs.size())].toString();
+                World tempWorld = getWorld(tempMap);
+                if (tempWorld == null) {
+                    throw new MinigameException(MinigameException.MAP_NOT_FOUND);
+                } else {
+                    currentMapID = tempMap;
+                    currentWorld = tempWorld;
+                }
+            }
+
+            int random = new Random().nextInt(super.players.size());
+            Location seekerSpawnLocation = seekerSpawn;
+            Location hiderSpawnLocation = currentWorld.getSpawnLocation();
+
+            for (String playerName : super.players) {
+                Player player = FTSPlugin.getInstance().getServer().getPlayer(playerName);
+                if (player == null) {
+                    throw new MinigameException(MinigameException.PLAYER_NOT_FOUND);
+                } else {
+                    player.setGameMode(GameMode.ADVENTURE);
+                    if (random == 0 && firstSeeker == null) {
+                        firstSeeker = playerName;
+                        seekers.add(playerName);
+                        player.teleport(seekerSpawnLocation);
+                    } else if (firstSeeker != null && firstSeeker.equals(playerName)) {
+                        seekers.add(playerName);
+                        player.teleport(seekerSpawnLocation);
+                    } else {
+                        hiders.add(playerName);
+                        player.teleport(hiderSpawnLocation);
+                    }
+                    random--;
+                }
+            }
+
+            listener = new HnSListener(this);
+        }
+    }
+
+    @Override
+    protected boolean loop() {
+        String hidersMessage;
+        String seekersMessage;
+        if (hideTime > 0) {
+            if (hideTime < 15) {
+                hidersMessage = "§c§lAttention !§r il ne vous reste plus que " + formatTime(hideTime) + " pour vous cacher !";
+                seekersMessage = "Vous allez passer à l'action dans " + formatTime(hideTime) + " !";
+            } else {
+                hidersMessage = "Vous avez " + formatTime(hideTime) + " pour vous cacher !";
+                seekersMessage = "Il ne reste plus que " + formatTime(hideTime) + " aux §3§lHiders§r pour se cacher !";
+            }
+
+            for (String playerName : players) {
+                Player player = getPlayer(playerName);
+                if (player != null) {
+                    if (hiders.contains(playerName)) {
+                        player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(hidersMessage));
+                    } else {
+                        if (hideTime == 0) {
+                            player.teleport(currentWorld.getSpawnLocation());
+                        }
+                        player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(seekersMessage));
                     }
                 }
             }
 
-            if (seekerSpawn == null) {
-                throw new MinigameException("Aucun spawn pour le seeker n'a été trouvé");
-            }
-        }
-
-        listener = new HnSListener();
-        createHidersTeam();
-        createSeekersTeam();
-
-        this.seekTime = defaultSeekTime;
-        this.hideTime = defaultHideTime;
-
-        getServer().getPluginManager().registerEvents(listener, FTSMain.getInstance());
-        seeker = players.get(new Random().nextInt(players.size()));
-        seeker.getScoreboard().getTeam("seekers").addEntry(seeker.getName());
-        seeker.teleport(seekerSpawn.getLocation());
-
-        for (Player player : players) {
-            player.setGameMode(GameMode.ADVENTURE);
-            if (player != seeker) {
-                player.getScoreboard().getTeam("hiders").addEntry(player.getName());
-                player.teleport(world.getSpawnLocation());
-            }
-        }
-        for (Player player : spectators) {
-            player.setGameMode(GameMode.SPECTATOR);
-            player.teleport(world.getSpawnLocation());
-        }
-        started = true;
-        update();
-    }
-
-    @Override
-    public void update() {
-        task = Bukkit.getScheduler().scheduleSyncRepeatingTask(FTSMain.getInstance(), () -> {
-            String hidersMessage;
-            String seekersMessage;
-            if (hideTime > 0) {
-                hideTime--;
-
-                if (hideTime < 15) {
-                    hidersMessage = "§c§lAttention !§r il ne vous reste plus que " + formatTime(hideTime) + " pour vous cacher !";
-                    seekersMessage = "Vous allez passer à l'action dans " + formatTime(hideTime) + " !";
-                } else {
-                    hidersMessage = "Vous avez " + formatTime(hideTime) + " pour vous cacher !";
-                    seekersMessage = "Il ne reste plus que " + formatTime(hideTime) + " aux §3§lHiders§r pour se cacher !";
+            hideTime--;
+            if (hideTime == 0) {
+                for (String playerName : seekers) {
+                    Player player = getPlayer(playerName);
+                    if (player != null) {
+                        player.teleport(currentWorld.getSpawnLocation());
+                    }
                 }
+            }
+        } else if (seekTime > 0) {
+            if (seekTime < 60) {
+                seekersMessage = "§c§lAttention !§r il ne vous reste plus que " + formatTime(seekTime) + " pour trouver les §3§lHiders§r !";
+                hidersMessage = "Il ne reste plus que " + formatTime(seekTime) + ". Tenez bon !";
+            } else {
+                hidersMessage = "Il reste " + formatTime(seekTime) + ". Restez bien caché !";
+                seekersMessage = "Il vous reste " + formatTime(seekTime) + " pour trouver les §3§lHiders§r !";
+            }
 
-                for (Player player : players) {
-                    if (player.getScoreboard().getTeam("hiders").getEntries().contains(player.getName())) {
+            for (String playerName : players) {
+                Player player = getPlayer(playerName);
+                if (player != null) {
+                    if (hiders.contains(playerName)) {
                         player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(hidersMessage));
                     } else {
                         player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(seekersMessage));
                     }
                 }
-
-                if (hideTime == 0) {
-                    seeker.teleport(world.getSpawnLocation());
-                }
-            } else if (seekTime > 0) {
-                seekTime--;
-
-                if (seekTime < 60) {
-                    seekersMessage = "§c§lAttention !§r il ne vous reste plus que " + formatTime(seekTime) + " pour trouver les §3§lHiders§r !";
-                    hidersMessage = "Il ne reste plus que " + formatTime(seekTime) + ". Tenez bon !";
-                } else {
-                    hidersMessage = "Il reste " + formatTime(seekTime) + ". Restez bien caché !";
-                    seekersMessage = "Il vous reste " + formatTime(seekTime) + " pour trouver les §3§lHiders§r !";
-                }
-
-                for (Player player : players) {
-                    if (player.getScoreboard().getTeam("hiders").getEntries().contains(player.getName())) {
-                        player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(hidersMessage));
-                    } else {
-                        player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(seekersMessage));
-                    }
-                }
-
-                if (seekTime == 0 || getScoreboardManager().getMainScoreboard().getTeam("hiders").getEntries().size() == 0) {
-                    end();
-                }
             }
-        }, 0, 20);
+
+            seekTime--;
+
+            return hiders.isEmpty() || seekTime == 0;
+        }
+
+        return false;
     }
 
     @Override
-    public void end() {
-        getScheduler().cancelTask(task);
-        HandlerList.unregisterAll(listener);
-        World lobby = getServer().getWorld("lobby");
-        started = false;
-
-        for (Player player : super.players) {
-            if (lobby != null) {
-                Location lobbySpawn = getMinigameLobby();
-                if (lobbySpawn != null) {
-                    player.teleport(lobbySpawn);
-                } else {
-                    player.teleport(lobby.getSpawnLocation());
+    public void unset() {
+        if (seekTime > 0 && hiders.isEmpty()) {
+            for (String playerName : seekers) {
+                Player player = getPlayer(playerName);
+                if (player != null) {
+                    player.sendMessage("L'équipe des §cSeekers§r de §3§l" + firstSeeker + "§r a gagné !");
                 }
-                player.getScoreboard().getTeam("hiders").removeEntry(player.getName());
-                player.getScoreboard().getTeam("seekers").removeEntry(player.getName());
-                if (seekTime == 0) {
-                    player.sendMessage("Les §b§lHiders§r ont gagné !");
-                } else {
-                    player.sendMessage("Les §c§lSeekers§r ont gagné !");
+            }
+        } else {
+            for (String playerName : seekers) {
+                Player player = getPlayer(playerName);
+                if (player != null) {
+                    player.sendMessage("L'équipe des §3Hiders§r a gagné !");
+                }
+            }
+        }
+
+        hiders = new HashSet<>();
+        seekers = new HashSet<>();
+        listener.destroy();
+        hideTime = DEFAULT_HIDE_TIME;
+        seekTime = DEFAULT_SEEK_TIME;
+        firstSeeker = null;
+
+        for (String playerName : players) {
+            Player player = getPlayer(playerName);
+            if (player != null) {
+                player.teleport(lobbySpawn);
+            }
+        }
+    }
+
+    @Override
+    public List<String> getConfigArgs(String[] args) {
+        if (args.length > 1) {
+            return List.of("hideTime", "seekTime", "seeker", "seekerSpawn");
+        }
+        return List.of();
+    }
+
+    @Override
+    public boolean configCommand(Player sender, String[] args) {
+        if (!isStarted()) {
+            if (args != null && args.length > 2) {
+                switch (args[1]) {
+                    case "hideTime" -> {
+                        int time = Integer.parseInt(args[2]);
+                        if (time > 15) {
+                            hideTime = time;
+                        } else {
+                            hideTime = 15;
+                            sender.sendMessage("§cLa durée doit être supérieure à 15 secondes.");
+                        }
+                    }
+                    case "seekTime" -> {
+                        int time = Integer.parseInt(args[2]);
+                        if (time > 60) {
+                            seekTime = time;
+                        } else {
+                            seekTime = 60;
+                            sender.sendMessage("§cLa durée doit être supérieure à 60 secondes.");
+                        }
+                    }
+                    case "seeker" -> {
+                        String playerName = args[2];
+                        if (getPlayer(playerName) != null) {
+                            firstSeeker = playerName;
+                            sender.sendMessage("§aLe joueur §e" + playerName + "§a sera le prochain §3§lSeeker§a !");
+                        } else {
+                            sender.sendMessage("§cLe joueur §e" + playerName + "§c n'existe pas !");
+                        }
+                    }
+                    case "seekerSpawn" -> {
+
+                    }
                 }
             } else {
-                player.teleport(getServer().getWorlds().get(0).getSpawnLocation());
+                sender.sendMessage("§c/game config <hideTime | seekTime | seeker> <valeur>");
             }
-        }
-    }
-
-    public int getHideTime() {
-        return hideTime;
-    }
-
-    public int getSeekTime() {
-        return seekTime;
-    }
-
-    public void setHideTime(int hideTime) {
-        if (hideTime < 0) {
-            this.hideTime = (hideTime * -1);
         } else {
-            this.hideTime = hideTime;
+            sender.sendMessage("§cVous ne pouvez pas changer les paramètres d'une partie en cours.");
         }
-    }
-
-    public void setSeekTime(int seekTime) {
-        if (seekTime < 0) {
-            this.seekTime = (seekTime * -1);
-        } else {
-            this.seekTime = seekTime;
-        }
-    }
-
-    public void setWorld(World world) {
-        this.world = world;
-    }
-
-    public World getWorld() {
-        return world;
-    }
-
-    private void createHidersTeam() {
-        if (getScoreboardManager() != null) {
-            Team hiders = getScoreboardManager().getMainScoreboard().getTeam("hiders");
-            if (hiders != null) {
-                return;
-            }
-            hiders = getScoreboardManager().getMainScoreboard().registerNewTeam("hiders");
-            hiders.setPrefix("§b[Hider] ");
-            hiders.setSuffix("");
-            hiders.setAllowFriendlyFire(false);
-            hiders.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.NEVER);
-            hiders.setOption(Team.Option.DEATH_MESSAGE_VISIBILITY, Team.OptionStatus.NEVER);
-        }
-    }
-
-    private void createSeekersTeam() {
-        if (getScoreboardManager() != null) {
-            Team seekers = getScoreboardManager().getMainScoreboard().getTeam("seekers");
-            if (seekers != null) {
-                return;
-            }
-            seekers = getScoreboardManager().getMainScoreboard().registerNewTeam("seekers");
-            seekers.setPrefix("§c[Seeker] ");
-            seekers.setSuffix("");
-            seekers.setAllowFriendlyFire(false);
-            seekers.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.NEVER);
-            seekers.setOption(Team.Option.DEATH_MESSAGE_VISIBILITY, Team.OptionStatus.NEVER);
-        }
+        return true;
     }
 }

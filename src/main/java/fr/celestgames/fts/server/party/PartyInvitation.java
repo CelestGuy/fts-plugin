@@ -1,6 +1,6 @@
 package fr.celestgames.fts.server.party;
 
-import fr.celestgames.fts.FTSMain;
+import fr.celestgames.fts.FTSPlugin;
 import fr.celestgames.fts.server.PartyManager;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -23,7 +23,7 @@ public class PartyInvitation {
         this.party = partyName;
         this.invitationTimestamp = System.currentTimeMillis();
 
-        FTSMain plugin = FTSMain.getInstance();
+        FTSPlugin plugin = FTSPlugin.getInstance();
 
         this.firstWarning = Bukkit.getScheduler().runTaskLater(plugin, () -> {
             invited.sendMessage("§cVotre invitation à la party §a§l" + partyName + "§r§c expire dans §n§630§r§c secondes.");

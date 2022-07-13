@@ -1,7 +1,7 @@
-main: fr.celestgames.fts.FTSMain
+main: fr.celestgames.fts.FTSPlugin
 name: FTS_Plugin
 version: '0.1'
-description: A test plugin
+description: Minigame plugin, and more !
 author: Celest_Guy
 website: http://celestgames.fr
 load: POSTWORLD

@@ -1,6 +1,5 @@
 package fr.celestgames.fts.commands;
 
-import fr.celestgames.fts.FTSMain;
 import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;

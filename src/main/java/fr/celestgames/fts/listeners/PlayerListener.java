@@ -1,9 +1,9 @@
 package fr.celestgames.fts.listeners;
 
-import fr.celestgames.fts.FTSMain;
+import fr.celestgames.fts.exceptions.MinigameException;
 import fr.celestgames.fts.minigames.Minigame;
-import fr.celestgames.fts.server.GameManager;
 import fr.celestgames.fts.server.PartyManager;
+import fr.celestgames.fts.server.RoomManager;
 import fr.celestgames.fts.server.party.Party;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
@@ -20,25 +20,22 @@ public class PlayerListener implements Listener {
     }
 
     @EventHandler
-    public void onPlayerLeave(PlayerQuitEvent event) {
+    public void onPlayerLeave(PlayerQuitEvent event) throws MinigameException {
         clearPlayer(event.getPlayer());
     }
 
     @EventHandler
-    public void onPlayerLeave(PlayerKickEvent event) {
+    public void onPlayerLeave(PlayerKickEvent event) throws MinigameException {
         clearPlayer(event.getPlayer());
     }
 
-    private void clearPlayer(Player player) {
-        //player.getInventory().clear();
+    private void clearPlayer(Player player) throws MinigameException {
+        player.getInventory().clear();
         teleportPlayerToLobby(player);
         removePlayerFromTeam(player);
         removePlayerFromParty(player);
         removePlayerFromMinigame(player);
         PartyManager.getInstance().removeInvitations(player);
-        for (Party p : PartyManager.getInstance().getParties()) {
-            p.removeMember(player);
-        }
     }
 
     private void teleportPlayerToLobby(Player player) {
@@ -61,10 +58,10 @@ public class PlayerListener implements Listener {
         }
     }
 
-    private void removePlayerFromMinigame(Player p) {
-        Minigame g = GameManager.getInstance().getPlayerMinigame(p);
+    private void removePlayerFromMinigame(Player p) throws MinigameException {
+        Minigame g = RoomManager.getInstance().getPlayerRoom(p);
         if (g != null) {
-            g.removePlayer(p);
+            g.removePlayer(p.getName());
         }
     }
 }
