@@ -5,6 +5,7 @@ description: Minigame plugin, and more !
 author: Celest_Guy
 website: http://celestgames.fr
 load: POSTWORLD
+api-version: 1.13
 commands:
   infos:
     description: Obtenir les infos du plugin du serveur
